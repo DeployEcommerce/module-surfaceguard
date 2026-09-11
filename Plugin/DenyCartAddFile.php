@@ -47,7 +47,7 @@ final class DenyCartAddFile
             return $proceed();
         }
 
-        if (!$this->carriesFiles($subject)) {
+        if (!$this->carriesUpload($subject)) {
             return $proceed();
         }
 
@@ -61,29 +61,73 @@ final class DenyCartAddFile
     }
 
     /**
-     * Whether the request brought any uploaded file at all.
+     * Whether the request actually carries an uploaded file.
+     *
+     * The presence of entries is not proof of an upload. PHP puts every file input on a
+     * submitted multipart form into $_FILES, including ones the customer left empty, with
+     * error UPLOAD_ERR_NO_FILE — and Laminas keeps them all when it maps the superglobal.
+     * The product view form is multipart whenever the product has any option at all, so
+     * counting entries would refuse ordinary purchases of any product that merely offers an
+     * optional file option.
      *
      * @param Add $subject
      * @return bool
      */
-    private function carriesFiles(Add $subject): bool
+    private function carriesUpload(Add $subject): bool
     {
         $files = $subject->getRequest()->getFiles();
 
-        if ($files === null) {
+        if ($files instanceof \ArrayObject) {
+            $files = $files->getArrayCopy();
+        } elseif ($files instanceof \Traversable) {
+            $files = iterator_to_array($files);
+        }
+
+        if (!is_array($files)) {
+            // An unrecognised shape is treated as "no upload", in keeping with the module's
+            // fail-safe rule. The custom-option backstop still catches the upload itself.
             return false;
         }
 
-        if (is_array($files)) {
-            return $files !== [];
+        return $this->containsUpload($files);
+    }
+
+    /**
+     * Walk the mapped file parameters, which nest when an input name carries brackets.
+     *
+     * @param array $entries
+     * @return bool
+     */
+    private function containsUpload(array $entries): bool
+    {
+        foreach ($entries as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+
+            if ($this->isUpload($entry) || $this->containsUpload($entry)) {
+                return true;
+            }
         }
 
-        if ($files instanceof \Countable) {
-            return count($files) > 0;
-        }
-
-        // An unrecognised shape is treated as "no files", in keeping with the module's
-        // fail-safe rule. The custom-option backstop is what catches the upload itself.
         return false;
+    }
+
+    /**
+     * Whether one mapped entry represents a file the customer actually submitted.
+     *
+     * Any error other than UPLOAD_ERR_NO_FILE still means a file was sent, even when PHP
+     * rejected it and left the size at zero, so those count as an upload and are denied.
+     *
+     * @param array $entry
+     * @return bool
+     */
+    private function isUpload(array $entry): bool
+    {
+        if (!array_key_exists('error', $entry) || is_array($entry['error'])) {
+            return false;
+        }
+
+        return (int)$entry['error'] !== UPLOAD_ERR_NO_FILE;
     }
 }
