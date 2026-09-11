@@ -1,0 +1,23 @@
+{
+    "name": "deployecommerce/module-surface-guard",
+    "description": "env.php-only kill switches for Magento's public unauthenticated file-upload entry points.",
+    "type": "magento2-module",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.2||^8.3||^8.4",
+        "magento/framework": "^103.0",
+        "magento/module-catalog": "^104.0",
+        "magento/module-checkout": "^100.4",
+        "magento/module-customer": "^103.0",
+        "magento/module-graph-ql": "^100.4",
+        "magento/module-quote": "^101.2"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "DeployEcommerce\\SurfaceGuard\\": ""
+        }
+    }
+}
