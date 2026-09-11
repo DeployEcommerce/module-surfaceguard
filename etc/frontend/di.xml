@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Deploy Ecommerce. All rights reserved.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+
+    <type name="Magento\Checkout\Controller\Cart\Add">
+        <plugin name="deployecommerce_surfaceguard_cart_add_file"
+                type="DeployEcommerce\SurfaceGuard\Plugin\DenyCartAddFile"
+                sortOrder="10"/>
+    </type>
+
+    <type name="Magento\Customer\Controller\Address\File\Upload">
+        <plugin name="deployecommerce_surfaceguard_customer_address_file"
+                type="DeployEcommerce\SurfaceGuard\Plugin\DenyCustomerAddressFileUpload"
+                sortOrder="10"/>
+    </type>
+
+    <!--
+        Scoped to the storefront on purpose. These are the unauthenticated entry points;
+        the adminhtml upload controllers use the same factory but sit behind a login, so
+        they are left working.
+    -->
+    <type name="Magento\Customer\Model\FileUploaderFactory">
+        <plugin name="deployecommerce_surfaceguard_customer_file_upload"
+                type="DeployEcommerce\SurfaceGuard\Plugin\DenyCustomerFileUpload"
+                sortOrder="10"/>
+    </type>
+</config>

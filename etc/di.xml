@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Deploy Ecommerce. All rights reserved.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+
+    <!--
+        Denials get their own log file. A denial line in a shared log is a denial line
+        nobody finds.
+    -->
+    <virtualType name="DeployEcommerce\SurfaceGuard\Model\Logger\Handler"
+                 type="Magento\Framework\Logger\Handler\Base">
+        <arguments>
+            <argument name="fileName" xsi:type="string">/var/log/surfaceguard.log</argument>
+        </arguments>
+    </virtualType>
+
+    <virtualType name="DeployEcommerce\SurfaceGuard\Model\Logger" type="Magento\Framework\Logger\Monolog">
+        <arguments>
+            <argument name="handlers" xsi:type="array">
+                <item name="surfaceguard" xsi:type="object">DeployEcommerce\SurfaceGuard\Model\Logger\Handler</item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <type name="DeployEcommerce\SurfaceGuard\Model\DenialLogger">
+        <arguments>
+            <argument name="logger" xsi:type="object">DeployEcommerce\SurfaceGuard\Model\Logger</argument>
+        </arguments>
+    </type>
+
+    <!--
+        The backstop. Every custom-option file upload crosses one of these two validators
+        before the file reaches pub/media, whichever layer or controller it arrived through.
+    -->
+    <type name="Magento\Catalog\Model\Product\Option\Type\File\ValidatorFile">
+        <plugin name="deployecommerce_surfaceguard_file_option_backstop"
+                type="DeployEcommerce\SurfaceGuard\Plugin\DenyFileOptionBackstop"
+                sortOrder="10"/>
+    </type>
+
+    <type name="Magento\Catalog\Model\Product\Option\Type\File\ValidatorInfo">
+        <plugin name="deployecommerce_surfaceguard_file_option_info_backstop"
+                type="DeployEcommerce\SurfaceGuard\Plugin\DenyFileOptionBackstop"
+                sortOrder="10"/>
+    </type>
+</config>
