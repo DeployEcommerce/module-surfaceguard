@@ -11,10 +11,10 @@ use DeployEcommerce\SurfaceGuard\Model\DenialLogger;
 use DeployEcommerce\SurfaceGuard\Model\SwitchConfig;
 use DeployEcommerce\SurfaceGuard\Plugin\DenyGraphQl;
 use Magento\Framework\App\DeploymentConfig;
+use Magento\Framework\App\FrontControllerInterface;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\App\Response\Http as HttpResponse;
 use Magento\Framework\HTTP\PhpEnvironment\RemoteAddress;
-use Magento\GraphQl\Controller\GraphQl;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -67,11 +67,9 @@ class DenyGraphQlTest extends TestCase
         $this->assertSame($expected, $result);
     }
 
-    private function controller(): GraphQl&MockObject
+    private function controller(): FrontControllerInterface&MockObject
     {
-        return $this->getMockBuilder(GraphQl::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        return $this->createMock(FrontControllerInterface::class);
     }
 
     /**

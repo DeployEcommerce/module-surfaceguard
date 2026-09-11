@@ -59,9 +59,13 @@ All configuration is a single top-level `harden` key in `app/etc/env.php`:
 
 Changes take effect on the next request. Deployment config is not held in the config cache, so no `cache:flush` is needed — only the usual opcache reset on deploy.
 
-## Two things to know before you switch anything off
+## Four things to know before you switch anything off
 
 **`graphql.enabled = false` is blunt.** It refuses the whole endpoint. Core GraphQL cart mutations take string-only option inputs and carry no file-write sink, so there is no upload variant to deny selectively — the endpoint is the only lever. Setting this to `false` stops every headless and PWA storefront call. Use it only on sites confirmed to be Luma or Hyvä with no GraphQL consumers.
+
+The guard runs ahead of Magento's built-in GraphQL cache, so a cached query is refused rather than served from cache. It can do nothing about a response already cached at the CDN, because Varnish or Fastly answers those before PHP is reached at all. This is a PHP-layer control, so on a site behind a CDN, purge the CDN cache after switching GraphQL off.
+
+**Optional file options still sell.** Magento runs its file-option validation even when a customer uploads nothing against an *optional* file option, and relies on the specific exception core throws there to let the purchase continue. The backstop therefore denies only when a file is genuinely present, so switching an upload off never blocks a customer who simply left an optional upload empty.
 
 **The custom-option backstop is layer-agnostic.** `ValidatorFile` and `ValidatorInfo` are the two points every custom-option file upload crosses before the file is moved into `pub/media`, and guarding them is what makes "off" mean genuinely neutered rather than "that one controller is blocked". The consequence is that with either `cart_add_file` or `guest_cart_items_file` off, **the admin-side custom-option file flow is denied too**. This is intentional — a store that has switched the feature off is not selling file-option products — but it is stated here so nobody debugs it as a bug later.
 

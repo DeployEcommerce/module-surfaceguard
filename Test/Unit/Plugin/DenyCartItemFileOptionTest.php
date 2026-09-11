@@ -57,6 +57,42 @@ class DenyCartItemFileOptionTest extends TestCase
         }
     }
 
+    /**
+     * A text option is the customer's own prose. Matching marker words inside it would
+     * refuse an ordinary purchase.
+     *
+     * @dataProvider innocentTextOptionProvider
+     */
+    public function testTextOptionMentioningAMarkerIsNotTreatedAsAnUpload(string $text): void
+    {
+        $plugin = $this->plugin([SwitchConfig::UPLOAD_GUEST_CART_ITEMS_FILE => false]);
+        $cartItem = $this->cartItem($text);
+
+        $this->assertSame(
+            $cartItem,
+            $plugin->aroundSave(
+                $this->createMock(CartItemRepositoryInterface::class),
+                static fn (CartItemInterface $item) => $item,
+                $cartItem
+            )
+        );
+    }
+
+    /**
+     * @return array<string, array{0: string}>
+     */
+    public static function innocentTextOptionProvider(): array
+    {
+        return [
+            'engraving mentioning secret_key' => ['Please print secret_key on the label'],
+            'value that is exactly a marker word' => ['quote_path'],
+            'note mentioning order_path' => ['Deliver via the order_path entrance'],
+            'json list rather than a keyed map' => ['["quote_path","order_path"]'],
+            'json string literal' => ['"secret_key"'],
+            'json number' => ['12345'],
+        ];
+    }
+
     public function testSerializedFileOptionIsRecognised(): void
     {
         $plugin = $this->plugin([SwitchConfig::UPLOAD_GUEST_CART_ITEMS_FILE => false]);

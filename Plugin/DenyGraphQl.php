@@ -9,10 +9,10 @@ namespace DeployEcommerce\SurfaceGuard\Plugin;
 
 use DeployEcommerce\SurfaceGuard\Model\DenialLogger;
 use DeployEcommerce\SurfaceGuard\Model\SwitchConfig;
+use Magento\Framework\App\FrontControllerInterface;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\App\Response\Http as HttpResponse;
 use Magento\Framework\App\ResponseInterface;
-use Magento\GraphQl\Controller\GraphQl;
 
 /**
  * Whole-endpoint kill switch for POST /graphql.
@@ -22,6 +22,9 @@ use Magento\GraphQl\Controller\GraphQl;
  * is the endpoint itself. Switching this off stops every headless and PWA storefront
  * call, so it belongs only on sites confirmed to be Luma or Hyvä with no GraphQL
  * consumers.
+ *
+ * Declared on the front controller interface in the graphql area, ahead of the cache
+ * plugins — see etc/graphql/di.xml for why the sort order matters.
  */
 final class DenyGraphQl
 {
@@ -42,13 +45,13 @@ final class DenyGraphQl
     /**
      * Refuse every GraphQL request with a bare 403 when the switch is off.
      *
-     * @param GraphQl $subject
+     * @param FrontControllerInterface $subject
      * @param callable $proceed
      * @param RequestInterface $request
      * @return ResponseInterface
      */
     public function aroundDispatch(
-        GraphQl $subject,
+        FrontControllerInterface $subject,
         callable $proceed,
         RequestInterface $request
     ): ResponseInterface {

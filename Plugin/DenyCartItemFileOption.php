@@ -22,10 +22,12 @@ use Magento\Quote\Api\Data\CartItemInterface;
  * Keyed on the option rather than the route: a plain item add passes untouched, which is
  * what keeps ordinary REST integrations working while the file path stays shut.
  *
- * Detection is marker-based. The REST re-materialize path is recognised by the
- * quote_path / order_path / secret_key keys that ValidatorInfo itself looks for, which
- * avoids loading product option metadata on every cart write. The ValidatorInfo backstop
- * is what guarantees the denial if a payload shape ever slips past these markers.
+ * Detection reads the option's structure. The REST re-materialize path is recognised by the
+ * quote_path / order_path / secret_key keys that ValidatorInfo itself looks for, carried in
+ * a keyed map rather than found as a substring, so a text option whose value mentions one of
+ * those words is not mistaken for an upload. Reading the keys avoids loading product option
+ * metadata on every cart write, and the ValidatorInfo backstop is what guarantees the denial
+ * if a payload shape ever slips past them.
  */
 final class DenyCartItemFileOption
 {
@@ -111,7 +113,14 @@ final class DenyCartItemFileOption
     }
 
     /**
-     * Whether one option value carries the markers of a file option.
+     * Whether one option value carries the structure of a file option.
+     *
+     * Structure, never substring. A file option's value is a keyed map — an array, or the
+     * JSON encoding of one. A text option's value is the customer's own prose, and matching
+     * substrings inside it would refuse an ordinary purchase for anyone who happens to type
+     * "print secret_key on the label".
+     *
+     * Only JSON is decoded. Attacker-controlled input is never unserialized.
      *
      * @param mixed $value
      * @return bool
@@ -119,21 +128,28 @@ final class DenyCartItemFileOption
     private function looksLikeFileValue(mixed $value): bool
     {
         if (is_array($value)) {
-            foreach (self::FILE_OPTION_MARKERS as $marker) {
-                if (array_key_exists($marker, $value)) {
-                    return true;
-                }
-            }
-
-            return false;
+            return $this->hasFileKeys($value);
         }
 
         if (!is_string($value) || $value === '') {
             return false;
         }
 
+        $decoded = json_decode($value, true);
+
+        return is_array($decoded) && $this->hasFileKeys($decoded);
+    }
+
+    /**
+     * Whether a decoded option value carries any of the file metadata keys.
+     *
+     * @param array $value
+     * @return bool
+     */
+    private function hasFileKeys(array $value): bool
+    {
         foreach (self::FILE_OPTION_MARKERS as $marker) {
-            if (str_contains($value, $marker)) {
+            if (array_key_exists($marker, $value)) {
                 return true;
             }
         }

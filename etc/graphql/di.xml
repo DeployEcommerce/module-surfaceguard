@@ -7,9 +7,24 @@
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
 
-    <type name="Magento\GraphQl\Controller\GraphQl">
+    <!--
+        Declared on the front controller interface, not the concrete GraphQl controller,
+        and with a negative sortOrder.
+
+        Magento_GraphQlCache puts its cache plugins on this same interface with no sortOrder
+        attribute, which the object manager config mapper reads as sortOrder 0. BuiltinPlugin
+        returns the cached response without calling proceed on a cache hit, so a guard at a
+        higher sortOrder is skipped entirely for cached queries. Running at -100 puts this
+        guard outside the cache lookup, where it refuses the request before the cache is
+        consulted.
+
+        A response already cached at the CDN never reaches PHP at all, so this switch cannot
+        refuse it. That limit is inherent to a PHP-layer control and is documented in the
+        README.
+    -->
+    <type name="Magento\Framework\App\FrontControllerInterface">
         <plugin name="deployecommerce_surfaceguard_graphql"
                 type="DeployEcommerce\SurfaceGuard\Plugin\DenyGraphQl"
-                sortOrder="10"/>
+                sortOrder="-100"/>
     </type>
 </config>
